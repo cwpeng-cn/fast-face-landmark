@@ -1,12 +1,12 @@
 import torch
 from torch import nn
-from torch.nn import BCELoss
+from torch.nn import BCEWithLogitsLoss
 
 
 class WeightLoss(nn.Module):
     def __init__(self):
         super(WeightLoss, self).__init__()
-        self.class_criterion = BCELoss()
+        self.class_criterion = BCEWithLogitsLoss()
 
     def forward(self, landmark_gt, landmarks, visables, pre_visable,
                 actually_visable):

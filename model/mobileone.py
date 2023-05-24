@@ -392,7 +392,7 @@ class MobileOne(nn.Module):
         x = torch.cat([x0, x1, x], 1)
         landmark = self.linear(x)
         visable = self.linear2(x)
-        return landmark.view(-1, 68, 2), F.sigmoid(visable)
+        return landmark.view(-1, 68, 2), visable
 
 
 PARAMS = {
