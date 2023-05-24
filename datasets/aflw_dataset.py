@@ -31,6 +31,7 @@ class AFLWDataset(Dataset):
         sc = 1  # scaling
         rot = 0  # rotation
         pn = np.ones(3)  # per channel pixel-noise
+        shift_x, shift_y = 0, 0
 
         if self.is_train and self.use_augmentation:
             pn = np.random.uniform(1 - constants.noise_factor,
@@ -43,8 +44,10 @@ class AFLWDataset(Dataset):
                 1 + constants.scale_factor,
                 max(1 - constants.scale_factor,
                     np.random.randn() * constants.scale_factor + 1))
-            rot = 0
-        return pn, rot, sc
+            shift_x = np.random.randn() * constants.shift_factor
+            shift_y = np.random.randn() * constants.shift_factor
+            rot = 0  # TODO
+        return pn, rot, sc, shift_x, shift_y
 
     def rgb_processing(self, rgb_img, center, scale, rot, pn):
         """Process rgb image and do augmentation."""
@@ -88,7 +91,7 @@ class AFLWDataset(Dataset):
 
         item = {}
         annot = self.annots[index]
-        pn, rot, sc = self.augm_params()
+        pn, rot, sc, shift_x, shift_y = self.augm_params()
 
         img = cv2.imread(annot["img_path"])[:, :, ::-1].copy().astype(
             np.float32)  ##Note: BGR to RGB. We always use RGB
@@ -97,6 +100,17 @@ class AFLWDataset(Dataset):
         h, w = annot["h"], annot["w"]
         scale = max(h, w) / constants.IMG_RES
         visable = annot["visable"].copy()
+
+        full_h, full_w = img.shape[:2]
+        new_center_x = shift_x * w / 2 + center[0]
+        new_center_y = shift_y * h / 2 + center[1]
+        if (1 + constants.scale_factor) * w / 2 < new_center_x < full_w - (
+                1 + constants.scale_factor) * w / 2 and (
+                    1 +
+                    constants.scale_factor) * h / 2 < new_center_y < full_h - (
+                        1 + constants.scale_factor) * h / 2:
+            center[0] = new_center_x
+            center[1] = new_center_y
 
         img = self.rgb_processing(img, center, sc * scale, rot, pn)
         img = torch.from_numpy(img).float()
@@ -147,13 +161,13 @@ if __name__ == "__main__":
         visable = item["visable"]
         for k in range(len(visable)):
             if visable[k] == 1:
-                # print([int(keypoint[k][0]),int(keypoint[k][1])])
                 if 0 < min(keypoint[k]) < max(keypoint[k]) < 112:
                     np_img = cv2.circle(
                         np_img, [int(keypoint[k][0]),
                                  int(keypoint[k][1])], 2, [255, 0, 0], -1)
                 else:
-                    print(min(keypoint[k]), max(keypoint[k]))
+                    # print(min(keypoint[k]), max(keypoint[k]))
+                    pass
 
         cv2.imwrite("processed/{}.jpg".format(i), np_img)
         cv2.waitKey(500)
