@@ -325,6 +325,7 @@ class MobileOne(nn.Module):
                                        num_se_blocks=num_blocks_per_stage[3] if use_se else 0)
         self.gap = nn.AdaptiveAvgPool2d(output_size=1)
         self.linear = nn.Linear(1984, num_classes)
+        self.linear2 = nn.Linear(1984, num_classes//2)
 
         self.avg_pool1 = nn.AvgPool2d(14)
         self.avg_pool2 = nn.AvgPool2d(7)
@@ -389,8 +390,9 @@ class MobileOne(nn.Module):
         x = self.gap(x)
         x = x.view(x.size(0), -1)
         x = torch.cat([x0, x1, x], 1)
-        x = self.linear(x)
-        return x.view(-1, 68, 2)
+        landmark = self.linear(x)
+        visable = self.linear2(x)
+        return landmark.view(-1, 68, 2), visable
 
 
 PARAMS = {

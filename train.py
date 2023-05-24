@@ -48,24 +48,22 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected')
 
 
-def train(train_loader, net, criterion, optimizer, epoch):
+def train(train_loader, net, criterion, optimizer):
     losses = AverageMeter()
     net = net.to(device)
 
     weighted_loss = None
     for item in train_loader:
-        img = item["img"]
-        landmark_gt = item["keypoints"]
-        visable = item["visable"]
+        img = item["img"].to(device)
+        landmark_gt = item["keypoints"].to(device)
+        visable = item["visable"].to(device)
+        actually_visable = item['actually_visable'].to(device)
 
         optimizer.zero_grad()
-        img = img.to(device)
-        landmark_gt = landmark_gt.to(device)
-        visable = visable.to(device)
 
         with autocast():
-            pre_landmarks = net(img)
-            weighted_loss = criterion(landmark_gt, pre_landmarks, visable)
+            pre_landmarks,pre_visable = net(img)
+            weighted_loss = criterion(landmark_gt, pre_landmarks, visable, pre_visable, actually_visable)
             print(weighted_loss.item())
 
         scaler.scale(weighted_loss).backward()
@@ -84,8 +82,10 @@ def validate(val_dataloader, net, criterion):
             img = item["img"].to(device)
             landmark_gt = item["keypoints"].to(device)
             visable = item["visable"].to(device)
-            pre_landmark = net(img)
-            weighted_loss = criterion(landmark_gt, pre_landmark, visable)
+            actually_visable = item['actually_visable'].to(device)
+
+            pre_landmark,pre_visable = net(img)
+            weighted_loss = criterion(landmark_gt, pre_landmark, visable, pre_visable, actually_visable)
             losses.append(weighted_loss.cpu().numpy())
     print("===> Evaluate:")
     print('Eval set: Average loss: {:.4f} '.format(np.mean(losses)))
@@ -137,7 +137,7 @@ def main(args):
     # step 4: run
     writer = SummaryWriter(args.tensorboard)
     for epoch in range(args.start_epoch, args.end_epoch + 1):
-        train_loss = train(dataloader, net, criterion, optimizer, epoch)
+        train_loss = train(dataloader, net, criterion, optimizer)
         filename = os.path.join(
             str(args.snapshot), "checkpoint_epoch_" + str(epoch) + '.pth.tar')
         save_checkpoint(

@@ -13,6 +13,7 @@ import logging
 import argparse
 import numpy as np
 from utils import constants
+from torch.nn import functional as F
 
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
@@ -25,7 +26,7 @@ from model.mobileone import mobileone,reparameterize_model
 from loss.weight_loss import WeightLoss
 from utils.avg_meter import AverageMeter
 
-dataset=AFLWDataset()
+dataset=AFLWDataset(is_train=False)
 train_ds,val_ds=random_split(dataset,lengths=[int(len(dataset)*0.95),len(dataset)-int(len(dataset)*0.95)])
 val_dataloader = DataLoader(val_ds,
                         batch_size=1,
@@ -58,9 +59,15 @@ with torch.no_grad():
         img=item["img"].to(device)
         landmark_gt=item["keypoints"].to(device)
         visable=item["visable"].to(device)[0]
-
-        pre_landmark = net(img)[0]
+        
+        pre_landmarks,pre_visables = net(img)
+        pre_landmark,pre_visable=pre_landmarks[0],pre_visables[0]  
+        
         keypoint=(pre_landmark.numpy()+1)*constants.IMG_RES/2
+        
+        print((F.sigmoid(pre_visable)>0.5).int())
+        print(visable)
+        print("-------------------------------")
         
         np_img=torch2numpy(img[0])
         
@@ -69,7 +76,8 @@ with torch.no_grad():
                 if 0<min(keypoint[k])<max(keypoint[k])<112:
                     cv2.circle(np_img,[int(keypoint[k][0]),int(keypoint[k][1])],2,[255,0,0],-1)
                 else:
-                    print(min(keypoint[k]),max(keypoint[k]))
+                    # print(min(keypoint[k]),max(keypoint[k]))
+                    pass
 
         cv2.imwrite("processed/{}.jpg".format(i),np_img)
         cv2.waitKey(500)
