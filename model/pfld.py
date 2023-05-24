@@ -86,7 +86,7 @@ class PFLDInference(nn.Module):
 
         self.avg_pool1 = nn.AvgPool2d(14)
         self.avg_pool2 = nn.AvgPool2d(7)
-        self.fc = nn.Linear(176, 68*2)
+        self.fc = nn.Linear(176, 68 * 2)
 
     def forward(self, x):  # x: 3, 112, 112
         x = self.relu(self.bn1(self.conv1(x)))  # [64, 56, 56]
@@ -118,7 +118,7 @@ class PFLDInference(nn.Module):
         multi_scale = torch.cat([x1, x2, x3], 1)
         landmarks = self.fc(multi_scale)
 
-        return landmarks.view(-1,68,2)
+        return landmarks.view(-1, 68, 2)
 
 
 if __name__ == '__main__':
@@ -130,13 +130,12 @@ if __name__ == '__main__':
 
     from thop import profile
     from thop import clever_format
-    flops, params = profile(pfld_backbone, inputs=(input,))
+    flops, params = profile(pfld_backbone, inputs=(input, ))
     flops, params = clever_format([flops, params], "%.3f")
     print(flops, params)
 
     import time
-    start_time=time.time()
+    start_time = time.time()
     for i in range(100):
         pfld_backbone(input)
-    print("pfld spend {} ms".format((time.time()-start_time)*10))
-
+    print("pfld spend {} ms".format((time.time() - start_time) * 10))

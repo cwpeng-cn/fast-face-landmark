@@ -14,6 +14,7 @@ from tqdm import tqdm
 
 FOLDER = "/home/cwpeng/projects/data/merl_rav_organized/"
 
+
 def load_annot(annot_path):
     with open(annot_path, 'r') as f:
         points, visables = [], []
@@ -32,22 +33,30 @@ def load_annot(annot_path):
         visables = np.array(visables)
     return points, visables
 
-infos=[]
+
+infos = []
 for CLASS in os.listdir(FOLDER):
     CLASS_PATH = os.path.join(FOLDER, CLASS)
     for train_test in os.listdir(CLASS_PATH):
         train_test_path = os.path.join(CLASS_PATH, train_test)
         for name in tqdm(glob.glob(os.path.join(train_test_path, "*.jpg"))):
             img_path = os.path.join(train_test_path, name)
-            annot_path = os.path.join(
-                train_test_path, name.replace("jpg", "pts"))
+            annot_path = os.path.join(train_test_path,
+                                      name.replace("jpg", "pts"))
             landmark, visable = load_annot(annot_path)
             visable_landmark = landmark[visable == 1]
             center_x = int(visable_landmark[:, 0].mean())
             center_y = int(visable_landmark[:, 1].mean())
-            w = visable_landmark[:, 0].max()-visable_landmark[:, 0].min()
-            h = visable_landmark[:, 1].max()-visable_landmark[:, 1].min()
-            info = {"img_path": img_path, "visable": visable, "landmark": landmark,
-                    "center_x": center_x, "center_y": center_y, "w": w, "h": h}
+            w = visable_landmark[:, 0].max() - visable_landmark[:, 0].min()
+            h = visable_landmark[:, 1].max() - visable_landmark[:, 1].min()
+            info = {
+                "img_path": img_path,
+                "visable": visable,
+                "landmark": landmark,
+                "center_x": center_x,
+                "center_y": center_y,
+                "w": w,
+                "h": h
+            }
             infos.append(info)
-np.save("./datasets/aflw_annota.npy",infos)
+np.save("./datasets/aflw_annota.npy", infos)

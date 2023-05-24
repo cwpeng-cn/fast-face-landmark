@@ -17,7 +17,6 @@ from utils.imutils import crop, transform
 
 
 class AFLWDataset(Dataset):
-
     def __init__(self, use_augmentation=True, is_train=True):
         super(AFLWDataset, self).__init__()
         self.is_train = is_train
@@ -48,7 +47,6 @@ class AFLWDataset(Dataset):
         return pn, rot, sc
 
     def rgb_processing(self, rgb_img, center, scale, rot, pn):
-
         """Process rgb image and do augmentation."""
         rgb_img = crop(rgb_img,
                        center,
@@ -73,16 +71,14 @@ class AFLWDataset(Dataset):
         return rgb_img
 
     def j2d_processing(self, kp, center, scale, r=0):
-
         """Process gt 2D keypoints and apply all augmentation transforms."""
         nparts = kp.shape[0]
         for i in range(nparts):
             kp[i] = transform(kp[i] + 1,
                               center,
-                              scale, 
-                              [constants.IMG_RES, constants.IMG_RES],
+                              scale, [constants.IMG_RES, constants.IMG_RES],
                               rot=r)
-            
+
         # convert to normalized coordinates
         kp = 2. * kp / constants.IMG_RES - 1.  #-1 to 1
         kp = kp.astype('float32')
@@ -116,7 +112,7 @@ class AFLWDataset(Dataset):
                 actually_visable.append(1)
             else:
                 actually_visable.append(0)
-        
+
         actually_visable = np.array(actually_visable) & visable
 
         item['visable'] = visable

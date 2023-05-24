@@ -22,7 +22,6 @@ from model.mobileone import mobileone
 from loss.weight_loss import WeightLoss
 from utils.avg_meter import AverageMeter
 
-
 device = "cuda"
 scaler = GradScaler()
 torch.manual_seed(0)
@@ -62,8 +61,9 @@ def train(train_loader, net, criterion, optimizer):
         optimizer.zero_grad()
 
         with autocast():
-            pre_landmarks,pre_visable = net(img)
-            weighted_loss = criterion(landmark_gt, pre_landmarks, visable, pre_visable, actually_visable)
+            pre_landmarks, pre_visable = net(img)
+            weighted_loss = criterion(landmark_gt, pre_landmarks, visable,
+                                      pre_visable, actually_visable)
             print(weighted_loss.item())
 
         scaler.scale(weighted_loss).backward()
@@ -84,8 +84,9 @@ def validate(val_dataloader, net, criterion):
             visable = item["visable"].to(device)
             actually_visable = item['actually_visable'].to(device)
 
-            pre_landmark,pre_visable = net(img)
-            weighted_loss = criterion(landmark_gt, pre_landmark, visable, pre_visable, actually_visable)
+            pre_landmark, pre_visable = net(img)
+            weighted_loss = criterion(landmark_gt, pre_landmark, visable,
+                                      pre_visable, actually_visable)
             losses.append(weighted_loss.cpu().numpy())
     print("===> Evaluate:")
     print('Eval set: Average loss: {:.4f} '.format(np.mean(losses)))
@@ -95,7 +96,8 @@ def validate(val_dataloader, net, criterion):
 def main(args):
     # Step 1: parse args config
     logging.basicConfig(
-        format='[%(asctime)s] [p%(process)s] [%(pathname)s:%(lineno)d] [%(levelname)s] %(message)s',
+        format=
+        '[%(asctime)s] [p%(process)s] [%(pathname)s:%(lineno)d] [%(levelname)s] %(message)s',
         level=logging.INFO,
         handlers=[
             logging.FileHandler(args.log_file, mode='w'),
@@ -105,13 +107,13 @@ def main(args):
 
     # Step 2: model, criterion, optimizer, scheduler
     # net = PFLDInference().to(device)
-    net = mobileone(num_classes=68*2, inference_mode=False, variant="s1")
+    net = mobileone(num_classes=68 * 2, inference_mode=False, variant="s1")
     criterion = WeightLoss()
     optimizer = torch.optim.Adam([{
         'params': net.parameters()
     }],
-        lr=args.base_lr,
-        weight_decay=args.weight_decay)
+                                 lr=args.base_lr,
+                                 weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', patience=args.lr_patience, verbose=True)
     if args.resume:
@@ -122,8 +124,12 @@ def main(args):
     # step 3: data
     # argumetion
     dataset = AFLWDataset()
-    train_ds, val_ds = random_split(dataset, lengths=[int(
-        len(dataset)*0.95), len(dataset)-int(len(dataset)*0.95)])
+    train_ds, val_ds = random_split(dataset,
+                                    lengths=[
+                                        int(len(dataset) * 0.95),
+                                        len(dataset) -
+                                        int(len(dataset) * 0.95)
+                                    ])
     dataloader = DataLoader(train_ds,
                             batch_size=args.train_batchsize,
                             shuffle=True,
@@ -138,13 +144,12 @@ def main(args):
     writer = SummaryWriter(args.tensorboard)
     for epoch in range(args.start_epoch, args.end_epoch + 1):
         train_loss = train(dataloader, net, criterion, optimizer)
-        filename = os.path.join(
-            str(args.snapshot), "checkpoint_epoch_" + str(epoch) + '.pth.tar')
-        save_checkpoint(
-            {
-                'epoch': epoch,
-                'net': net.state_dict(),
-            }, filename)
+        filename = os.path.join(str(args.snapshot),
+                                "checkpoint_epoch_" + str(epoch) + '.pth.tar')
+        save_checkpoint({
+            'epoch': epoch,
+            'net': net.state_dict(),
+        }, filename)
 
         val_loss = validate(val_dataloader, net, criterion)
 
@@ -187,11 +192,7 @@ def parse_args():
     parser.add_argument('--tensorboard',
                         default="./checkpoint/tensorboard",
                         type=str)
-    parser.add_argument(
-        '--resume',
-        default='',
-        type=str,
-        metavar='PATH')
+    parser.add_argument('--resume', default='', type=str, metavar='PATH')
 
     parser.add_argument('--train_batchsize', default=512, type=int)
     parser.add_argument('--val_batchsize', default=256, type=int)
