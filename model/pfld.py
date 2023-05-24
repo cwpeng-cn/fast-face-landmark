@@ -127,3 +127,16 @@ if __name__ == '__main__':
     landmarks = pfld_backbone(input)
 
     print("landmarks.shape: {}".format(landmarks.shape))
+
+    from thop import profile
+    from thop import clever_format
+    flops, params = profile(pfld_backbone, inputs=(input,))
+    flops, params = clever_format([flops, params], "%.3f")
+    print(flops, params)
+
+    import time
+    start_time=time.time()
+    for i in range(100):
+        pfld_backbone(input)
+    print("pfld spend {} ms".format((time.time()-start_time)*10))
+
