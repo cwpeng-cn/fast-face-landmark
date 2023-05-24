@@ -1,6 +1,11 @@
-from __future__ import division
+# -*- encoding: utf-8 -*-
+'''
+Description      : AFLW dataset
+Time             :2023/05/24 13:24:02
+Author           :cwpeng
+email            :cw.peng@foxmail.com
+'''
 
-import ipdb
 import cv2
 import torch
 import numpy as np

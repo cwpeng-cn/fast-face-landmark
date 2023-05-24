@@ -1,3 +1,11 @@
+# -*- encoding: utf-8 -*-
+'''
+Description      : used to generate data
+Time             :2023/05/24 13:24:27
+Author           :cwpeng
+email            :cw.peng@foxmail.com
+'''
+
 import os
 import cv2
 import glob

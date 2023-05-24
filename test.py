@@ -1,3 +1,10 @@
+# -*- encoding: utf-8 -*-
+'''
+Description      : test
+Time             :2023/05/24 13:21:45
+Author           :cwpeng
+email            :cw.peng@foxmail.com
+'''
 
 import os
 import cv2
@@ -14,6 +21,7 @@ from torch.cuda.amp import GradScaler, autocast
 
 from datasets.aflw_dataset import AFLWDataset
 from model.pfld import PFLDInference
+from model.mobileone import mobileone,reparameterize_model
 from loss.weight_loss import WeightLoss
 from utils.avg_meter import AverageMeter
 
@@ -26,10 +34,16 @@ val_dataloader = DataLoader(val_ds,
                         drop_last=False)
 
 device="cpu"
-pfld_backbone = PFLDInference().to(device)
-checkpoint = torch.load("checkpoint/snapshot/checkpoint_epoch_94.pth.tar", map_location=device)
-pfld_backbone.load_state_dict(checkpoint['pfld_backbone'])
-pfld_backbone.eval()
+
+# net = PFLDInference().to(device)
+# checkpoint = torch.load("checkpoint/pfld_epoch_142.pth.tar", map_location=device)
+# net.load_state_dict(checkpoint['pfld_backbone'])
+
+net = mobileone(num_classes=68*2,inference_mode=False,variant="s1")
+checkpoint = torch.load("checkpoint/snapshot/checkpoint_epoch_150.pth.tar", map_location=device)
+net.load_state_dict(checkpoint['net'])
+net=reparameterize_model(net)
+net.eval()
 
 def torch2numpy(tensor_img):
     assert len(tensor_img.shape)==3
@@ -45,7 +59,7 @@ with torch.no_grad():
         landmark_gt=item["keypoints"].to(device)
         visable=item["visable"].to(device)[0]
 
-        pre_landmark = pfld_backbone(img)[0]
+        pre_landmark = net(img)[0]
         keypoint=(pre_landmark.numpy()+1)*constants.IMG_RES/2
         
         np_img=torch2numpy(img[0])

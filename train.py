@@ -1,4 +1,10 @@
-
+# -*- encoding: utf-8 -*-
+'''
+Description      : train
+Time             :2023/05/24 13:21:21
+Author           :cwpeng
+email            :cw.peng@foxmail.com
+'''
 import os
 import torch
 import logging
@@ -12,6 +18,7 @@ from torch.cuda.amp import GradScaler, autocast
 
 from datasets.aflw_dataset import AFLWDataset
 from model.pfld import PFLDInference
+from model.mobileone import mobileone
 from loss.weight_loss import WeightLoss
 from utils.avg_meter import AverageMeter
 
@@ -41,44 +48,44 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected')
 
 
-def train(train_loader, pfld_backbone, criterion, optimizer,epoch):
+def train(train_loader, net, criterion, optimizer, epoch):
     losses = AverageMeter()
-    pfld_backbone = pfld_backbone.to(device)
-    
-    weighted_loss=None
+    net = net.to(device)
+
+    weighted_loss = None
     for item in train_loader:
-        img=item["img"]
-        landmark_gt=item["keypoints"]
-        visable=item["visable"]
+        img = item["img"]
+        landmark_gt = item["keypoints"]
+        visable = item["visable"]
 
         optimizer.zero_grad()
         img = img.to(device)
         landmark_gt = landmark_gt.to(device)
-        visable=visable.to(device)
+        visable = visable.to(device)
 
         with autocast():
-            pre_landmarks = pfld_backbone(img)
-            weighted_loss= criterion(landmark_gt,pre_landmarks,visable)
+            pre_landmarks = net(img)
+            weighted_loss = criterion(landmark_gt, pre_landmarks, visable)
             print(weighted_loss.item())
-        
+
         scaler.scale(weighted_loss).backward()
         scaler.step(optimizer)
         scaler.update()
         losses.update(weighted_loss.item())
-        
+
     return weighted_loss
 
 
-def validate(val_dataloader, pfld_backbone,criterion):
-    pfld_backbone.eval().to(device)
+def validate(val_dataloader, net, criterion):
+    net.eval().to(device)
     losses = []
     with torch.no_grad():
-       for item in val_dataloader:
-            img=item["img"].to(device)
-            landmark_gt=item["keypoints"].to(device)
-            visable=item["visable"].to(device)
-            pre_landmark = pfld_backbone(img)
-            weighted_loss= criterion(landmark_gt,pre_landmark,visable)  
+        for item in val_dataloader:
+            img = item["img"].to(device)
+            landmark_gt = item["keypoints"].to(device)
+            visable = item["visable"].to(device)
+            pre_landmark = net(img)
+            weighted_loss = criterion(landmark_gt, pre_landmark, visable)
             losses.append(weighted_loss.cpu().numpy())
     print("===> Evaluate:")
     print('Eval set: Average loss: {:.4f} '.format(np.mean(losses)))
@@ -88,8 +95,7 @@ def validate(val_dataloader, pfld_backbone,criterion):
 def main(args):
     # Step 1: parse args config
     logging.basicConfig(
-        format=
-        '[%(asctime)s] [p%(process)s] [%(pathname)s:%(lineno)d] [%(levelname)s] %(message)s',
+        format='[%(asctime)s] [p%(process)s] [%(pathname)s:%(lineno)d] [%(levelname)s] %(message)s',
         level=logging.INFO,
         handlers=[
             logging.FileHandler(args.log_file, mode='w'),
@@ -98,46 +104,49 @@ def main(args):
     print_args(args)
 
     # Step 2: model, criterion, optimizer, scheduler
-    pfld_backbone = PFLDInference().to(device)
+    # net = PFLDInference().to(device)
+    net = mobileone(num_classes=68*2, inference_mode=False, variant="s1")
     criterion = WeightLoss()
     optimizer = torch.optim.Adam([{
-        'params': pfld_backbone.parameters()
+        'params': net.parameters()
     }],
-                                 lr=args.base_lr,
-                                 weight_decay=args.weight_decay)
+        lr=args.base_lr,
+        weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', patience=args.lr_patience, verbose=True)
     if args.resume:
         checkpoint = torch.load(args.resume)
-        pfld_backbone.load_state_dict(checkpoint["pfld_backbone"])
+        net.load_state_dict(checkpoint["net"])
         args.start_epoch = checkpoint["epoch"]
 
     # step 3: data
     # argumetion
-    dataset=AFLWDataset()
-    train_ds,val_ds=random_split(dataset,lengths=[int(len(dataset)*0.95),len(dataset)-int(len(dataset)*0.95)])
+    dataset = AFLWDataset()
+    train_ds, val_ds = random_split(dataset, lengths=[int(
+        len(dataset)*0.95), len(dataset)-int(len(dataset)*0.95)])
     dataloader = DataLoader(train_ds,
                             batch_size=args.train_batchsize,
                             shuffle=True,
                             num_workers=args.workers,
                             drop_last=False)
     val_dataloader = DataLoader(val_ds,
-                                     batch_size=args.val_batchsize,
-                                     shuffle=False,
-                                     num_workers=args.workers)
+                                batch_size=args.val_batchsize,
+                                shuffle=False,
+                                num_workers=args.workers)
 
     # step 4: run
     writer = SummaryWriter(args.tensorboard)
     for epoch in range(args.start_epoch, args.end_epoch + 1):
-        train_loss = train(dataloader, pfld_backbone,criterion,optimizer, epoch)
-        filename = os.path.join(str(args.snapshot),"checkpoint_epoch_" + str(epoch) + '.pth.tar')
+        train_loss = train(dataloader, net, criterion, optimizer, epoch)
+        filename = os.path.join(
+            str(args.snapshot), "checkpoint_epoch_" + str(epoch) + '.pth.tar')
         save_checkpoint(
             {
                 'epoch': epoch,
-                'pfld_backbone': pfld_backbone.state_dict(),
+                'net': net.state_dict(),
             }, filename)
 
-        val_loss = validate(val_dataloader, pfld_backbone,criterion)
+        val_loss = validate(val_dataloader, net, criterion)
 
         scheduler.step(val_loss)
         writer.add_scalars('data/loss', {
@@ -148,11 +157,12 @@ def main(args):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='pfld')
+    parser = argparse.ArgumentParser(description='mobileone')
     # general
-    parser.add_argument('-j', '--workers', default=0, type=int)
-    parser.add_argument('--devices_id', default='0', type=str)  #TBD
-    parser.add_argument('--test_initial', default='false', type=str2bool)  #TBD
+    parser.add_argument('-j', '--workers', default=16, type=int)
+    parser.add_argument('--devices_id', default='0', type=str)  # TBD
+    parser.add_argument('--test_initial', default='false',
+                        type=str2bool)  # TBD
 
     # training
     ##  -- optimizer
@@ -164,7 +174,7 @@ def parse_args():
 
     # -- epoch
     parser.add_argument('--start_epoch', default=1, type=int)
-    parser.add_argument('--end_epoch', default=500, type=int)
+    parser.add_argument('--end_epoch', default=150, type=int)
 
     # -- snapshot、tensorboard log and checkpoint
     parser.add_argument('--snapshot',
