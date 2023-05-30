@@ -153,7 +153,7 @@ def torch2numpy(tensor_img):
 
 if __name__ == "__main__":
     dataset = AFLWDataset()
-    for i in range(100):
+    for i in np.random.choice(a=len(dataset),size=100):
         item = dataset[i]
         img = item["img"]
         np_img = torch2numpy(img)
@@ -170,4 +170,4 @@ if __name__ == "__main__":
                     pass
 
         cv2.imwrite("processed/{}.jpg".format(i), np_img)
-        cv2.waitKey(500)
+        cv2.waitKey(10)
