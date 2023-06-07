@@ -324,8 +324,8 @@ class MobileOne(nn.Module):
         self.stage4 = self._make_stage(int(512 * width_multipliers[3]), num_blocks_per_stage[3],
                                        num_se_blocks=num_blocks_per_stage[3] if use_se else 0)
         self.gap = nn.AdaptiveAvgPool2d(output_size=1)
-        self.linear = nn.Linear(1984, num_classes)
-        self.linear2 = nn.Linear(1984, num_classes//2)
+        self.linear = nn.Linear(3136, num_classes)
+        self.linear2 = nn.Linear(3136, num_classes//2)
 
         self.avg_pool1 = nn.AvgPool2d(14)
         self.avg_pool2 = nn.AvgPool2d(7)
@@ -436,8 +436,9 @@ def reparameterize_model(model: torch.nn.Module) -> nn.Module:
 
 
 if __name__ == "__main__":
-    net = mobileone(num_classes=68*2, inference_mode=False, variant="s1")
+    net = mobileone(num_classes=68*2, inference_mode=False, variant="s3")
     net = reparameterize_model(net)
+    print(net)
 
     input = torch.randn(1, 3, 112, 112)
     from thop import profile

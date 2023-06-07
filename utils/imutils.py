@@ -138,3 +138,36 @@ def flip_img(img):
     """
     img = np.fliplr(img)
     return img
+
+
+def torch2numpy(tensor_img):
+    assert len(tensor_img.shape) == 3
+    np_img = tensor_img.numpy()
+    np_img = np.transpose(np_img, (1, 2, 0))
+    np_img = np_img * constants.IMG_NORM_STD + constants.IMG_NORM_MEAN
+    np_img = (np_img * 255).astype(np.uint8)
+    return np_img.copy()
+
+def rgb_processing(rgb_img, center, scale, rot, pn):
+    """Process rgb image and do augmentation."""
+    rgb_img = crop(rgb_img,
+                    center,
+                    scale, [constants.IMG_RES, constants.IMG_RES],
+                    rot=rot)
+
+    if rgb_img is None:
+        return None
+
+    # in the rgb image we add pixel noise in a channel-wise manner
+    rgb_img[:, :,
+            0] = np.minimum(255.0, np.maximum(0.0,
+                                                rgb_img[:, :, 0] * pn[0]))
+    rgb_img[:, :,
+            1] = np.minimum(255.0, np.maximum(0.0,
+                                                rgb_img[:, :, 1] * pn[1]))
+    rgb_img[:, :,
+            2] = np.minimum(255.0, np.maximum(0.0,
+                                                rgb_img[:, :, 2] * pn[2]))
+
+    rgb_img = np.transpose(rgb_img.astype('float32'), (2, 0, 1)) / 255.0
+    return rgb_img

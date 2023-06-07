@@ -6,25 +6,17 @@ Author           :cwpeng
 email            :cw.peng@foxmail.com
 '''
 
-import os
 import cv2
 import torch
-import logging
-import argparse
 import numpy as np
 from utils import constants
 from torch.nn import functional as F
-
 from torch.utils.data import DataLoader
-from tensorboardX import SummaryWriter
 from torch.utils.data import random_split
-from torch.cuda.amp import GradScaler, autocast
 
-from datasets.aflw_dataset import AFLWDataset
-from model.pfld import PFLDInference
+from utils.imutils import torch2numpy
+from dataset.aflw_dataset import AFLWDataset
 from model.mobileone import mobileone, reparameterize_model
-from loss.weight_loss import WeightLoss
-from utils.avg_meter import AverageMeter
 
 dataset = AFLWDataset(is_train=False)
 train_ds, val_ds = random_split(dataset,
@@ -50,16 +42,6 @@ checkpoint = torch.load("checkpoint/snapshot/checkpoint_epoch_150.pth.tar",
 net.load_state_dict(checkpoint['net'])
 net = reparameterize_model(net)
 net.eval()
-
-
-def torch2numpy(tensor_img):
-    assert len(tensor_img.shape) == 3
-    np_img = tensor_img.numpy()
-    np_img = np.transpose(np_img, (1, 2, 0))
-    np_img = np_img * constants.IMG_NORM_STD + constants.IMG_NORM_MEAN
-    np_img = (np_img * 255).astype(np.uint8)
-    return np_img.copy()
-
 
 with torch.no_grad():
     for i, item in enumerate(val_dataloader):

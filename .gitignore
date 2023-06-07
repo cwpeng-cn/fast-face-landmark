@@ -3,3 +3,4 @@ checkpoint
 nohup.out
 __pycache__
 *.tar
+*.npy
