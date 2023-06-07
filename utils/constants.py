@@ -9,4 +9,4 @@ LP300W_ANNOT_PATH = "./dataset/300wlp_annot.npy"
 rot_factor = 30
 noise_factor = 0.4
 scale_factor = 0.25
-shift_factor = 0.24
+shift_factor = 0.20

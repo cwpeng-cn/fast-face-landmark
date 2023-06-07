@@ -23,7 +23,7 @@ class AFLWDataset(Dataset):
         self.use_augmentation = use_augmentation
         self.normalize_img = Normalize(mean=constants.IMG_NORM_MEAN,
                                        std=constants.IMG_NORM_STD)
-        self.annots = np.load(constants.DS_ANNOT_PATH, allow_pickle=True)
+        self.annots = np.load(constants.AFLW_ANNOT_PATH, allow_pickle=True)
         print(">>> AFLWDataset:: Loading {} samples".format(len(self.annots)))
 
     def augm_params(self):
@@ -44,8 +44,10 @@ class AFLWDataset(Dataset):
                 1 + constants.scale_factor,
                 max(1 - constants.scale_factor,
                     np.random.randn() * constants.scale_factor + 1))
-            shift_x = np.random.randn() * constants.shift_factor
-            shift_y = np.random.randn() * constants.shift_factor
+            shift_x = np.clip(np.random.randn() * constants.shift_factor,
+                              -constants.shift_factor, constants.shift_factor)
+            shift_y = np.clip(np.random.randn() * constants.shift_factor,
+                              -constants.shift_factor, constants.shift_factor)
             rot = 0  # TODO
         return pn, rot, sc, shift_x, shift_y
 
@@ -92,13 +94,14 @@ class AFLWDataset(Dataset):
         item = {}
         annot = self.annots[index]
         pn, rot, sc, shift_x, shift_y = self.augm_params()
+        # print(pn,rot,sc,shift_x,shift_y)
 
         img = cv2.imread(annot["img_path"])[:, :, ::-1].copy().astype(
             np.float32)  ##Note: BGR to RGB. We always use RGB
         points = annot["landmark"].copy()
         center = np.array([annot["center_x"], annot["center_y"]])
         h, w = annot["h"], annot["w"]
-        scale = max(h, w) / constants.IMG_RES
+        scale = max(h, w) / constants.IMG_RES * 1.2
         visable = annot["visable"].copy()
 
         full_h, full_w = img.shape[:2]
@@ -133,6 +136,7 @@ class AFLWDataset(Dataset):
         item['keypoints'] = keypoints
         item['img'] = self.normalize_img(img)
         item['actually_visable'] = actually_visable.astype(np.float32)
+        item['weight'] = annot['weight']  # hard
 
         # item['center'] = center.astype(np.float32)
         # item['scale'] = float(sc * scale)
@@ -153,7 +157,7 @@ def torch2numpy(tensor_img):
 
 if __name__ == "__main__":
     dataset = AFLWDataset()
-    for i in np.random.choice(a=len(dataset),size=100):
+    for i in np.random.choice(a=len(dataset), size=100):
         item = dataset[i]
         img = item["img"]
         np_img = torch2numpy(img)
@@ -168,6 +172,6 @@ if __name__ == "__main__":
                 else:
                     # print(min(keypoint[k]), max(keypoint[k]))
                     pass
-
-        cv2.imwrite("processed/{}.jpg".format(i), np_img)
-        cv2.waitKey(10)
+        # cv2.imshow("aflw",np_img)
+        cv2.imwrite("processed/{}_aflw.jpg".format(i), np_img)
+        cv2.waitKey(500)

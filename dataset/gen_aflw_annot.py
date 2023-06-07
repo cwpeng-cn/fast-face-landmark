@@ -33,7 +33,7 @@ def load_annot(annot_path):
         visables = np.array(visables)
     return points, visables
 
-weights={"frontal":1,"right":1.5,"left":1.5,"lefthalf":2,"righthalf":2}
+weights={"frontal":1,"right":1.2,"left":1.2,"lefthalf":1.5,"righthalf":1.5}
 infos = []
 for CLASS in os.listdir(FOLDER):
     CLASS_PATH = os.path.join(FOLDER, CLASS)
