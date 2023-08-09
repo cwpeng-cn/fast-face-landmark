@@ -16,8 +16,7 @@ from tensorboardX import SummaryWriter
 from torch.utils.data import random_split
 from torch.cuda.amp import GradScaler, autocast
 
-from datasets.aflw_dataset import AFLWDataset
-from model.pfld import PFLDInference
+from dataset.aflw_dataset import AFLWDataset
 from model.mobileone import mobileone
 from loss.weight_loss import WeightLoss
 from utils.avg_meter import AverageMeter
@@ -57,13 +56,14 @@ def train(train_loader, net, criterion, optimizer):
         landmark_gt = item["keypoints"].to(device)
         visable = item["visable"].to(device)
         actually_visable = item['actually_visable'].to(device)
+        weight = item['weight'].to(device)
 
         optimizer.zero_grad()
 
         with autocast():
             pre_landmarks, pre_visable = net(img)
             weighted_loss = criterion(landmark_gt, pre_landmarks, visable,
-                                      pre_visable, actually_visable)
+                                      pre_visable, actually_visable, weight)
             print(weighted_loss.item())
 
         scaler.scale(weighted_loss).backward()
@@ -83,10 +83,11 @@ def validate(val_dataloader, net, criterion):
             landmark_gt = item["keypoints"].to(device)
             visable = item["visable"].to(device)
             actually_visable = item['actually_visable'].to(device)
+            weight = item['weight'].to(device)
 
             pre_landmark, pre_visable = net(img)
             weighted_loss = criterion(landmark_gt, pre_landmark, visable,
-                                      pre_visable, actually_visable)
+                                      pre_visable, actually_visable, weight)
             losses.append(weighted_loss.cpu().numpy())
     print("===> Evaluate:")
     print('Eval set: Average loss: {:.4f} '.format(np.mean(losses)))
@@ -107,7 +108,7 @@ def main(args):
 
     # Step 2: model, criterion, optimizer, scheduler
     # net = PFLDInference().to(device)
-    net = mobileone(num_classes=68 * 2, inference_mode=False, variant="s1")
+    net = mobileone(num_classes=68 * 2, inference_mode=False, variant="s3")
     criterion = WeightLoss()
     optimizer = torch.optim.Adam([{
         'params': net.parameters()
