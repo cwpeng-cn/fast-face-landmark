@@ -44,10 +44,13 @@ class AFLWDataset(Dataset):
                 1 + constants.scale_factor,
                 max(1 - constants.scale_factor,
                     np.random.randn() * constants.scale_factor + 1))
+            if np.random.rand() > 0.6:
+                sc = max(sc, 1 - constants.scale_factor / 2)
             shift_x = np.clip(np.random.randn() * constants.shift_factor,
                               -constants.shift_factor, constants.shift_factor)
             shift_y = np.clip(np.random.randn() * constants.shift_factor,
-                              -constants.shift_factor, constants.shift_factor)
+                              -constants.shift_factor,
+                              constants.shift_factor / 2)
             rot = 0  # TODO
         return pn, rot, sc, shift_x, shift_y
 
