@@ -3,8 +3,8 @@ IMG_RES = 112
 IMG_NORM_MEAN = [0.485, 0.456, 0.406]
 IMG_NORM_STD = [0.229, 0.224, 0.225]
 
-AFLW_ANNOT_PATH = "./dataset/aflw_annot.npy"
-LP300W_ANNOT_PATH = "./dataset/300wlp_annot.npy"
+AFLW_PATH = "./dataset/aflw.lmdb"
+LP300W_PATH = "./dataset/300wlp_annot.npy"
 
 rot_factor = 30
 noise_factor = 0.4

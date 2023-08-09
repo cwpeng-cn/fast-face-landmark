@@ -5,15 +5,19 @@ Time             :2023/05/24 13:24:02
 Author           :cwpeng
 email            :cw.peng@foxmail.com
 '''
-
+import time
+import os
 import cv2
+import lmdb
 import torch
+import pickle
 import numpy as np
 from torch.utils.data import Dataset
 from torchvision.transforms import Normalize
 
 from utils import constants
 from utils.imutils import crop, transform
+from utils.img_conversion import imfrombytes
 
 
 class AFLWDataset(Dataset):
@@ -23,8 +27,14 @@ class AFLWDataset(Dataset):
         self.use_augmentation = use_augmentation
         self.normalize_img = Normalize(mean=constants.IMG_NORM_MEAN,
                                        std=constants.IMG_NORM_STD)
-        self.annots = np.load(constants.AFLW_ANNOT_PATH, allow_pickle=True)
-        print(">>> AFLWDataset:: Loading {} samples".format(len(self.annots)))
+        
+        annot_path=os.path.join(constants.AFLW_PATH,"meta_info.pkl")
+        with open(annot_path, 'rb') as f:
+            self.annots = pickle.load(f)
+        env=lmdb.open(constants.AFLW_PATH, readonly=True, lock=False, readahead=False)
+        self.txn=env.begin(write=False) 
+        self.keys=list(self.annots.keys())
+        print(">>> AFLWDataset:: Loading {} samples".format(len(self.keys)))
 
     def augm_params(self):
         """ augmentation parameters."""
@@ -93,14 +103,22 @@ class AFLWDataset(Dataset):
         return kp
 
     def __getitem__(self, index):
-
+        
+        start=time.time()
+        key=self.keys[index]
+        imgbyte=self.txn.get(key.encode('ascii'))
+        #load_=time.time()
+        img = imfrombytes(imgbyte)  ##Note: BGR to RGB. We always use RGB
+        
+        read=time.time()
+        if (read-start)*1000<4:
+            print("i time",img.shape)
+        
         item = {}
-        annot = self.annots[index]
+        annot = self.annots[key]
         pn, rot, sc, shift_x, shift_y = self.augm_params()
         # print(pn,rot,sc,shift_x,shift_y)
 
-        img = cv2.imread(annot["img_path"])[:, :, ::-1].copy().astype(
-            np.float32)  ##Note: BGR to RGB. We always use RGB
         points = annot["landmark"].copy()
         center = np.array([annot["center_x"], annot["center_y"]])
         h, w = annot["h"], annot["w"]
@@ -143,6 +161,13 @@ class AFLWDataset(Dataset):
 
         # item['center'] = center.astype(np.float32)
         # item['scale'] = float(sc * scale)
+        # process=time.time()
+
+        # print("-----------------------------------------")
+        # print("load time(wo)",(load_-start)*1000)
+        # print("load time",(read-start)*1000)
+        # print("processed time",(process-read)*1000)
+       
         return item
 
     def __len__(self):
@@ -176,5 +201,5 @@ if __name__ == "__main__":
                     # print(min(keypoint[k]), max(keypoint[k]))
                     pass
         # cv2.imshow("aflw",np_img)
-        cv2.imwrite("processed/{}_aflw.jpg".format(i), np_img)
-        cv2.waitKey(500)
+        # cv2.imwrite("processed/{}_aflw.jpg".format(i), np_img)
+        # cv2.waitKey(500)
