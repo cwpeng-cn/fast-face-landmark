@@ -21,7 +21,6 @@ from model.mobileone import mobileone
 from loss.weight_loss import WeightLoss
 from utils.avg_meter import AverageMeter
 
-import time
 
 device = "cuda"
 scaler = GradScaler()
@@ -53,9 +52,8 @@ def train(train_loader, net, criterion, optimizer):
     net = net.to(device)
 
     weighted_loss = None
-    old=time.time()
+   
     for item in train_loader:
-        new=time.time()
 
         img = item["img"].to(device)
         landmark_gt = item["keypoints"].to(device)
@@ -63,30 +61,18 @@ def train(train_loader, net, criterion, optimizer):
         actually_visable = item['actually_visable'].to(device)
         weight = item['weight'].to(device)
 
-        move=time.time()
-
         optimizer.zero_grad()
 
         with autocast():
             pre_landmarks, pre_visable = net(img)
             weighted_loss = criterion(landmark_gt, pre_landmarks, visable,
                                       pre_visable, actually_visable, weight)
-            # print(weighted_loss.item())
+            print(weighted_loss.item())
 
         scaler.scale(weighted_loss).backward()
         scaler.step(optimizer)
         scaler.update()
-        losses.update(weighted_loss.item())
-
-        cal=time.time()
-        
-        print("--------------------------------------")
-        print("load time:",(new-old)*1000)
-        print("move time:",(move-new)*1000)
-        print("cal time:",(cal-move)*1000)
-        old=time.time()
-
-        
+        losses.update(weighted_loss.item())  
 
     return weighted_loss
 
@@ -182,7 +168,7 @@ def main(args):
 def parse_args():
     parser = argparse.ArgumentParser(description='mobileone')
     # general
-    parser.add_argument('-j', '--workers', default=0, type=int)
+    parser.add_argument('-j', '--workers', default=8, type=int)
     parser.add_argument('--devices_id', default='0', type=str)  # TBD
     parser.add_argument('--test_initial', default='false',
                         type=str2bool)  # TBD
@@ -212,7 +198,7 @@ def parse_args():
                         type=str)
     parser.add_argument('--resume', default='', type=str, metavar='PATH')
 
-    parser.add_argument('--train_batchsize', default=100, type=int)
+    parser.add_argument('--train_batchsize', default=256, type=int)
     parser.add_argument('--val_batchsize', default=256, type=int)
     args = parser.parse_args()
     return args

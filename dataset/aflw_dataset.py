@@ -5,7 +5,6 @@ Time             :2023/05/24 13:24:02
 Author           :cwpeng
 email            :cw.peng@foxmail.com
 '''
-import time
 import os
 import cv2
 import lmdb
@@ -104,16 +103,10 @@ class AFLWDataset(Dataset):
 
     def __getitem__(self, index):
         
-        start=time.time()
         key=self.keys[index]
         imgbyte=self.txn.get(key.encode('ascii'))
-        #load_=time.time()
-        img = imfrombytes(imgbyte)  ##Note: BGR to RGB. We always use RGB
-        
-        read=time.time()
-        if (read-start)*1000<4:
-            print("i time",img.shape)
-        
+        img = imfrombytes(imgbyte)  
+
         item = {}
         annot = self.annots[key]
         pn, rot, sc, shift_x, shift_y = self.augm_params()
@@ -158,16 +151,7 @@ class AFLWDataset(Dataset):
         item['img'] = self.normalize_img(img)
         item['actually_visable'] = actually_visable.astype(np.float32)
         item['weight'] = annot['weight']  # hard
-
-        # item['center'] = center.astype(np.float32)
-        # item['scale'] = float(sc * scale)
-        # process=time.time()
-
-        # print("-----------------------------------------")
-        # print("load time(wo)",(load_-start)*1000)
-        # print("load time",(read-start)*1000)
-        # print("processed time",(process-read)*1000)
-       
+        
         return item
 
     def __len__(self):
