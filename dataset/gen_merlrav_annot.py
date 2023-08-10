@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 
 FOLDER = "/home/cwpeng/projects/data/merl_rav_organized/"
-SAVE_PATH = "./dataset/aflw.lmdb"
+SAVE_PATH = "./dataset/merl_rav.lmdb"
 COMPRESS_LEVEL = 1
 WEIGHTS = {
     "frontal": 1.0,

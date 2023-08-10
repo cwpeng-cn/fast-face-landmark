@@ -1,6 +1,6 @@
 # -*- encoding: utf-8 -*-
 '''
-Description      : AFLW dataset
+Description      : MERLRAV dataset
 Time             :2023/05/24 13:24:02
 Author           :cwpeng
 email            :cw.peng@foxmail.com
@@ -19,21 +19,21 @@ from utils.imutils import crop, transform
 from utils.img_conversion import imfrombytes
 
 
-class AFLWDataset(Dataset):
+class MERLRAVDataset(Dataset):
     def __init__(self, use_augmentation=True, is_train=True):
-        super(AFLWDataset, self).__init__()
+        super(MERLRAVDataset, self).__init__()
         self.is_train = is_train
         self.use_augmentation = use_augmentation
         self.normalize_img = Normalize(mean=constants.IMG_NORM_MEAN,
                                        std=constants.IMG_NORM_STD)
         
-        annot_path=os.path.join(constants.AFLW_PATH,"meta_info.pkl")
+        annot_path=os.path.join(constants.MERLRAV_PATH,"meta_info.pkl")
         with open(annot_path, 'rb') as f:
             self.annots = pickle.load(f)
-        env=lmdb.open(constants.AFLW_PATH, readonly=True, lock=False, readahead=False)
+        env=lmdb.open(constants.MERLRAV_PATH, readonly=True, lock=False, readahead=False)
         self.txn=env.begin(write=False) 
         self.keys=list(self.annots.keys())
-        print(">>> AFLWDataset:: Loading {} samples".format(len(self.keys)))
+        print(">>> MERLRAVDataset:: Loading {} samples".format(len(self.keys)))
 
     def augm_params(self):
         """ augmentation parameters."""
@@ -168,7 +168,7 @@ def torch2numpy(tensor_img):
 
 
 if __name__ == "__main__":
-    dataset = AFLWDataset()
+    dataset = MERLRAVDataset()
     for i in np.random.choice(a=len(dataset), size=100):
         item = dataset[i]
         img = item["img"]
@@ -184,6 +184,6 @@ if __name__ == "__main__":
                 else:
                     # print(min(keypoint[k]), max(keypoint[k]))
                     pass
-        # cv2.imshow("aflw",np_img)
-        # cv2.imwrite("processed/{}_aflw.jpg".format(i), np_img)
+        # cv2.imshow("MERLRAV",np_img)
+        # cv2.imwrite("processed/{}_MERLRAV_PATH.jpg".format(i), np_img)
         # cv2.waitKey(500)

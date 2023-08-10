@@ -15,10 +15,10 @@ from torch.utils.data import DataLoader
 from torch.utils.data import random_split
 
 from utils.imutils import torch2numpy
-from dataset.aflw_dataset import AFLWDataset
+from dataset.merlrav_dataset import MERLRAVDataset
 from model.mobileone import mobileone, reparameterize_model
 
-dataset = AFLWDataset(is_train=False)
+dataset = MERLRAVDataset(is_train=False)
 train_ds, val_ds = random_split(dataset,
                                 lengths=[
                                     int(len(dataset) * 0.95),

@@ -16,7 +16,7 @@ from tensorboardX import SummaryWriter
 from torch.utils.data import random_split
 from torch.cuda.amp import GradScaler, autocast
 
-from dataset.aflw_dataset import AFLWDataset
+from dataset.merlrav_dataset import MERLRAVDataset
 from model.mobileone import mobileone
 from loss.weight_loss import WeightLoss
 from utils.avg_meter import AverageMeter
@@ -128,7 +128,7 @@ def main(args):
 
     # step 3: data
     # argumetion
-    dataset = AFLWDataset()
+    dataset = MERLRAVDataset()
     train_ds, val_ds = random_split(dataset,
                                     lengths=[
                                         int(len(dataset) * 0.95),
