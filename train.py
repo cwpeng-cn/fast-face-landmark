@@ -21,7 +21,6 @@ from model.mobileone import mobileone
 from loss.weight_loss import WeightLoss
 from utils.avg_meter import AverageMeter
 
-
 device = "cuda"
 scaler = GradScaler()
 torch.manual_seed(0)
@@ -49,10 +48,9 @@ def str2bool(v):
 
 def train(train_loader, net, criterion, optimizer):
     losses = AverageMeter()
-    net = net.to(device)
 
     weighted_loss = None
-   
+
     for item in train_loader:
 
         img = item["img"].to(device)
@@ -67,12 +65,12 @@ def train(train_loader, net, criterion, optimizer):
             pre_landmarks, pre_visable = net(img)
             weighted_loss = criterion(landmark_gt, pre_landmarks, visable,
                                       pre_visable, actually_visable, weight)
-            print(weighted_loss.item())
+            print("loss:",weighted_loss.item())
 
         scaler.scale(weighted_loss).backward()
         scaler.step(optimizer)
         scaler.update()
-        losses.update(weighted_loss.item())  
+        losses.update(weighted_loss.item())
 
     return weighted_loss
 
@@ -111,7 +109,7 @@ def main(args):
 
     # Step 2: model, criterion, optimizer, scheduler
     # net = PFLDInference().to(device)
-    net = mobileone(num_classes=68 * 2, inference_mode=False, variant="s3")
+    net = mobileone(num_classes=68 * 2, inference_mode=False, variant="s1").to(device)
     criterion = WeightLoss()
     optimizer = torch.optim.Adam([{
         'params': net.parameters()
@@ -120,10 +118,13 @@ def main(args):
                                  weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', patience=args.lr_patience, verbose=True)
+    
     if args.resume:
         checkpoint = torch.load(args.resume)
         net.load_state_dict(checkpoint["net"])
         args.start_epoch = checkpoint["epoch"]
+        scheduler.load_state_dict(checkpoint['lr_schedule'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
 
     # step 3: data
     # argumetion
@@ -150,10 +151,13 @@ def main(args):
         train_loss = train(dataloader, net, criterion, optimizer)
         filename = os.path.join(str(args.snapshot),
                                 "checkpoint_epoch_" + str(epoch) + '.pth.tar')
-        save_checkpoint({
-            'epoch': epoch,
-            'net': net.state_dict(),
-        }, filename)
+        if epoch > 50:
+            save_checkpoint({
+                'epoch': epoch,
+                'optimizer':optimizer.state_dict(),
+                'net': net.state_dict(),
+                'lr_schedule': scheduler.state_dict()
+            }, filename)
 
         val_loss = validate(val_dataloader, net, criterion)
 
@@ -169,14 +173,11 @@ def parse_args():
     parser = argparse.ArgumentParser(description='mobileone')
     # general
     parser.add_argument('-j', '--workers', default=8, type=int)
-    parser.add_argument('--devices_id', default='0', type=str)  # TBD
-    parser.add_argument('--test_initial', default='false',
-                        type=str2bool)  # TBD
 
     # training
     ##  -- optimizer
     parser.add_argument('--base_lr', default=0.0001, type=int)
-    parser.add_argument('--weight-decay', '--wd', default=1e-6, type=float)
+    parser.add_argument('--weight_decay', '--wd', default=1e-6, type=float)
 
     # -- lr
     parser.add_argument("--lr_patience", default=40, type=int)
